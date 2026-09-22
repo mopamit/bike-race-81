@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#832058" />
+  <title>מרוץ האופניים המתמטי | פריזמה</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <img class="logo" src="assets/logo-prisming.png" alt="Prismind / פריזמה" />
+      <h1>מרוץ האופניים המתמטי</h1>
+      <div class="top-actions">
+        <button id="homeBtn" class="btn btn-secondary hidden" type="button">מסך הבית</button>
+        <button id="finishBtn" class="btn btn-secondary hidden" type="button">סיום משחק</button>
+      </div>
+    </header>
+
+    <section id="homeScreen" class="screen home-screen">
+      <div class="home-card card">
+        <div class="home-visual">
+          <div class="home-racers" aria-hidden="true">
+            <img class="home-rider home-kid" src="assets/images/kid-bike.png" alt="" />
+            <img class="home-rider home-robot" src="assets/images/robot-bike.png" alt="" />
+          </div>
+          <div class="home-copy">
+            <p class="eyebrow">חיבור וחיסור מספרים מכוונים</p>
+            <h2>מי יגיע ראשון לקו הסיום?</h2>
+            <p>
+              תשובה נכונה מקדמת את הילד. תשובה שגויה מקדמת את המחשב.
+              בחרו מצב משחק והתחילו במרוץ.
+            </p>
+          </div>
+        </div>
+
+        <div class="mode-panel">
+          <h3>בחרו מצב משחק</h3>
+          <div class="mode-grid">
+            <button class="mode-card" data-mode="2" type="button">
+              <span class="mode-chip">רמה בסיסית</span>
+              <strong>2 מספרים</strong>
+              <small>חיבור וחיסור של שני מספרים מכוונים</small>
+            </button>
+            <button class="mode-card" data-mode="3" type="button">
+              <span class="mode-chip">רמה מתקדמת</span>
+              <strong>3 מספרים</strong>
+              <small>חיבור וחיסור של שלושה מספרים מכוונים</small>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="gameScreen" class="screen game-screen hidden">
+      <div class="stats-grid">
+        <div class="status-card simple-stat">
+          <span>מצב</span>
+          <strong id="modeLabel">2 מספרים</strong>
+        </div>
+
+        <div class="status-card simple-stat">
+          <span>שאלה</span>
+          <strong id="questionIndex">1</strong>
+        </div>
+
+        <div class="status-card simple-stat">
+          <span>דיוק</span>
+          <strong id="accuracyValue">0%</strong>
+        </div>
+
+        <div class="status-card progress-stat player-stat">
+          <div class="progress-stat-head">
+            <span class="progress-name"><span class="legend-dot player-dot"></span>הילד</span>
+            <strong id="playerProgressText">0 מתוך 8</strong>
+          </div>
+          <div id="playerSteps" class="step-row" aria-label="התקדמות הילד"></div>
+        </div>
+
+        <div class="status-card progress-stat computer-stat">
+          <div class="progress-stat-head">
+            <span class="progress-name"><span class="legend-dot computer-dot"></span>המחשב</span>
+            <strong id="computerProgressText">0 מתוך 8</strong>
+          </div>
+          <div id="computerSteps" class="step-row" aria-label="התקדמות המחשב"></div>
+        </div>
+      </div>
+
+      <section class="race-card card">
+        <div id="raceTrack" class="race-track" aria-label="מסלול מרוץ אופניים">
+          <img class="race-background" src="assets/images/race-background.png" alt="כביש מרוץ עם קו התחלה מימין וקו סיום משמאל" />
+
+          <div id="playerRacer" class="racer racer-player" aria-label="הילד">
+            <img src="assets/images/kid-bike.png" alt="ילד רוכב על אופניים" />
+          </div>
+
+          <div id="computerRacer" class="racer racer-computer" aria-label="המחשב">
+            <img src="assets/images/robot-bike.png" alt="רובוט רוכב על אופניים" />
+          </div>
+        </div>
+      </section>
+
+      <section class="question-card card">
+        <div class="question-top">
+          <div>
+            <p class="question-label">פתרו את התרגיל</p>
+            <h2 id="questionExpression" class="question-expression">(+9) + (-6) = ?</h2>
+          </div>
+          <div id="feedbackPill" class="feedback-pill">בהצלחה!</div>
+        </div>
+        <div id="answersGrid" class="answers-grid" role="group" aria-label="אפשרויות תשובה"></div>
+      </section>
+    </section>
+  </main>
+
+  <dialog id="resultDialog" class="result-dialog">
+    <div class="result-card card">
+      <div id="resultIllustration" class="result-illustration"></div>
+      <p class="eyebrow" id="resultEyebrow">סיכום המשחק</p>
+      <h2 id="resultTitle">כל הכבוד!</h2>
+      <p id="resultText" class="result-text"></p>
+      <div class="summary-grid">
+        <div><span>מצב</span><strong id="summaryMode">2 מספרים</strong></div>
+        <div><span>שאלות שנענו</span><strong id="summaryQuestions">0</strong></div>
+        <div><span>תשובות נכונות</span><strong id="summaryCorrect">0</strong></div>
+        <div><span>דיוק</span><strong id="summaryAccuracy">0%</strong></div>
+      </div>
+      <div class="dialog-actions">
+        <button id="playAgainBtn" class="btn btn-primary" type="button">משחק נוסף</button>
+        <button id="backHomeBtn" class="btn btn-secondary" type="button">חזרה למסך הבית</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="app.js"></script>
+</body>
+</html>
