@@ -73,6 +73,101 @@
     return arr;
   }
 
+  function evaluateWithOperations(values, operations) {
+    let total = values[0];
+    for (let i = 1; i < values.length; i++) {
+      total = operations[i - 1] === '+' ? total + values[i] : total - values[i];
+    }
+    return total;
+  }
+
+  function buildPlausibleOptions(numbers, operations, correctAnswer) {
+    const candidates = [];
+    const seen = new Set([correctAnswer]);
+
+    function addCandidate(value) {
+      if (!Number.isFinite(value) || seen.has(value)) return;
+      seen.add(value);
+      candidates.push(value);
+    }
+
+    if (numbers.length === 2) {
+      // With two directed numbers, the classic student possibilities are built from
+      // the sum and difference of the two magnitudes, with either sign.
+      // Example: (-11) + (+9) -> -2, +2, +20, -20.
+      const a = Math.abs(numbers[0]);
+      const b = Math.abs(numbers[1]);
+      const magnitudeSum = a + b;
+      const magnitudeDifference = Math.abs(a - b);
+
+      [
+        magnitudeDifference,
+        -magnitudeDifference,
+        magnitudeSum,
+        -magnitudeSum,
+        -correctAnswer,
+        numbers[0] + numbers[1],
+        numbers[0] - numbers[1],
+        numbers[1] - numbers[0]
+      ].forEach(addCandidate);
+    } else {
+      const magnitudes = numbers.map(Math.abs);
+      const allMagnitudeSum = magnitudes.reduce((sum, n) => sum + n, 0);
+
+      // Common misconceptions for three terms:
+      // 1. Keep the operations but ignore the signs written on the numbers.
+      addCandidate(evaluateWithOperations(magnitudes, operations));
+
+      // 2. Ignore subtraction signs between terms and simply add the signed numbers.
+      addCandidate(numbers.reduce((sum, n) => sum + n, 0));
+
+      // 3. Treat every number as positive and add all magnitudes.
+      addCandidate(allMagnitudeSum);
+      addCandidate(-allMagnitudeSum);
+
+      // 4. Reverse only one operation — a very common sign/operation error.
+      for (let i = 0; i < operations.length; i++) {
+        const flippedOps = [...operations];
+        flippedOps[i] = flippedOps[i] === '+' ? '-' : '+';
+        addCandidate(evaluateWithOperations(numbers, flippedOps));
+      }
+
+      // 5. Correct magnitude, wrong final sign.
+      addCandidate(-correctAnswer);
+      addCandidate(Math.abs(correctAnswer));
+      addCandidate(-Math.abs(correctAnswer));
+
+      // 6. Work only with magnitudes but reverse one operation.
+      for (let i = 0; i < operations.length; i++) {
+        const flippedOps = [...operations];
+        flippedOps[i] = flippedOps[i] === '+' ? '-' : '+';
+        addCandidate(evaluateWithOperations(magnitudes, flippedOps));
+      }
+    }
+
+    // Very rare duplicate-heavy cases (for example equal magnitudes) still need four
+    // distinct answers. Keep the fallback structured around sign/magnitude mistakes,
+    // rather than arbitrary answers close to the correct result.
+    const magnitudeBase = numbers.reduce((sum, n) => sum + Math.abs(n), 0);
+    [
+      magnitudeBase,
+      -magnitudeBase,
+      Math.abs(correctAnswer),
+      -Math.abs(correctAnswer),
+      correctAnswer + magnitudeBase,
+      correctAnswer - magnitudeBase
+    ].forEach(addCandidate);
+
+    let delta = 1;
+    while (candidates.length < 3) {
+      addCandidate(correctAnswer + delta);
+      addCandidate(correctAnswer - delta);
+      delta++;
+    }
+
+    return [correctAnswer, ...candidates.slice(0, 3)];
+  }
+
   function calculateQuestion(mode) {
     const maxAbs = MAX_ABS[mode];
     const numbers = Array.from({ length: mode }, () => nonZeroInt(maxAbs));
@@ -87,23 +182,12 @@
       expression += ` ${op} ${formatSigned(numbers[i])}`;
     }
 
-    const distractors = new Set();
-    const allPlus = numbers.reduce((a, b) => a + b, 0);
-    const signFlip = -result;
-
-    [allPlus, signFlip, result + randInt(1, 5), result - randInt(1, 5)].forEach(v => {
-      if (v !== result) distractors.add(v);
-    });
-
-    while (distractors.size < 3) {
-      const guess = result + randInt(-9, 9);
-      if (guess !== result) distractors.add(guess);
-    }
+    const options = buildPlausibleOptions(numbers, operations, result);
 
     return {
       expression: `${expression} = ?`,
       correctAnswer: result,
-      options: shuffle([result, ...[...distractors].slice(0, 3)]),
+      options: shuffle(options),
       numbers,
       operations
     };
