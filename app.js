@@ -24,6 +24,7 @@
   const questionExpressionEl = document.getElementById('questionExpression');
   const feedbackPill = document.getElementById('feedbackPill');
   const answersGrid = document.getElementById('answersGrid');
+  const nextQuestionBtn = document.getElementById('nextQuestionBtn');
 
   const resultDialog = document.getElementById('resultDialog');
   const resultIllustration = document.getElementById('resultIllustration');
@@ -102,8 +103,64 @@
     return {
       expression: `${expression} = ?`,
       correctAnswer: result,
-      options: shuffle([result, ...[...distractors].slice(0, 3)])
+      options: shuffle([result, ...[...distractors].slice(0, 3)]),
+      numbers,
+      operations
     };
+  }
+
+  function getDidacticFeedback(question, isCorrect) {
+    const { numbers, operations } = question;
+
+    // Prefer the most conceptually important sign rule that appears in the current exercise.
+    let rule = 'general';
+    for (let i = 0; i < operations.length; i++) {
+      if (operations[i] === '-' && numbers[i + 1] < 0) {
+        rule = 'subtractNegative';
+        break;
+      }
+    }
+
+    if (rule === 'general') {
+      for (let i = 0; i < operations.length; i++) {
+        if (operations[i] === '+' && numbers[i + 1] < 0) {
+          rule = 'addNegative';
+          break;
+        }
+      }
+    }
+
+    if (rule === 'general') {
+      for (let i = 0; i < operations.length; i++) {
+        if (operations[i] === '-' && numbers[i + 1] > 0) {
+          rule = 'subtractPositive';
+          break;
+        }
+      }
+    }
+
+    if (rule === 'general') rule = 'addPositive';
+
+    const messages = {
+      subtractNegative: {
+        correct: 'מצוין! הבנת שחיסור של מספר שלילי הוא כמו חיבור הנגדי שלו. הילד מתקדם!',
+        wrong: 'שימו לב: כשמחסרים מספר שלילי, מוסיפים את הנגדי שלו. המחשב מתקדם.'
+      },
+      addNegative: {
+        correct: 'יפה! הבנת שחיבור של מספר שלילי הוא כמו חיסור הערך החיובי שלו. הילד מתקדם!',
+        wrong: 'שימו לב: חיבור של מספר שלילי מקטין את התוצאה — אפשר לחשוב עליו כחיסור. המחשב מתקדם.'
+      },
+      subtractPositive: {
+        correct: 'כל הכבוד! חיסרת נכון מספר חיובי. הילד מתקדם!',
+        wrong: 'שימו לב: כשמחסרים מספר חיובי, התוצאה קטנה. המחשב מתקדם.'
+      },
+      addPositive: {
+        correct: 'מעולה! חיברת נכון מספר חיובי. הילד מתקדם!',
+        wrong: 'שימו לב: כשמחברים מספר חיובי, התוצאה גדלה. המחשב מתקדם.'
+      }
+    };
+
+    return messages[rule][isCorrect ? 'correct' : 'wrong'];
   }
 
   function buildSteps(container) {
@@ -179,6 +236,9 @@
     state.locked = false;
     questionExpressionEl.textContent = state.currentQuestion.expression;
     answersGrid.innerHTML = '';
+    nextQuestionBtn.classList.add('hidden');
+    nextQuestionBtn.textContent = 'לתרגיל הבא';
+    nextQuestionBtn.dataset.action = 'next';
     setFeedback('בהצלחה!');
 
     state.currentQuestion.options.forEach(option => {
@@ -209,27 +269,19 @@
       state.correctAnswers += 1;
       state.playerScore += 1;
       clickedButton.classList.add('correct');
-      setFeedback('נכון! הילד מתקדם.', 'success');
+      setFeedback(getDidacticFeedback(state.currentQuestion, true), 'success');
     } else {
       state.computerScore += 1;
       clickedButton.classList.add('wrong');
-      setFeedback('לא נכון. המחשב מתקדם.', 'error');
+      setFeedback(getDidacticFeedback(state.currentQuestion, false), 'error');
     }
 
     updateStats();
 
-    if (state.playerScore >= RACE_LENGTH || state.computerScore >= RACE_LENGTH) {
-      setTimeout(() => {
-        finishGame(state.playerScore > state.computerScore ? 'player' : 'computer', false);
-      }, 900);
-      return;
-    }
-
-    state.questionIndex += 1;
-    setTimeout(() => {
-      updateStats();
-      renderQuestion();
-    }, 850);
+    const raceFinished = state.playerScore >= RACE_LENGTH || state.computerScore >= RACE_LENGTH;
+    nextQuestionBtn.dataset.action = raceFinished ? 'finish' : 'next';
+    nextQuestionBtn.textContent = raceFinished ? 'לסיכום המשחק' : 'לתרגיל הבא';
+    nextQuestionBtn.classList.remove('hidden');
   }
 
   function startGame(mode) {
@@ -300,6 +352,17 @@
 
   buildSteps(playerSteps);
   buildSteps(computerSteps);
+
+  nextQuestionBtn.addEventListener('click', () => {
+    if (nextQuestionBtn.dataset.action === 'finish') {
+      finishGame(state.playerScore > state.computerScore ? 'player' : 'computer', false);
+      return;
+    }
+
+    state.questionIndex += 1;
+    updateStats();
+    renderQuestion();
+  });
 
   modeCards.forEach(card => {
     card.addEventListener('click', () => startGame(Number(card.dataset.mode)));
