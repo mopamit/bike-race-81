@@ -8,6 +8,7 @@
   const gameScreen = document.getElementById('gameScreen');
   const homeBtn = document.getElementById('homeBtn');
   const finishBtn = document.getElementById('finishBtn');
+  const soundToggle = document.getElementById('soundToggle');
   const modeCards = document.querySelectorAll('.mode-card');
 
   const modeLabel = document.getElementById('modeLabel');
@@ -49,6 +50,40 @@
     locked: false,
     active: false
   };
+
+  const soundFiles = {
+    correct: 'assets/sounds/correct.mp3',
+    wrong: 'assets/sounds/wrong.mp3',
+    player: 'assets/sounds/player-win.mp3',
+    computer: 'assets/sounds/computer-win.mp3'
+  };
+  const sounds = Object.fromEntries(Object.entries(soundFiles).map(([name, src]) => {
+    const audio = new Audio(src);
+    audio.preload = 'auto';
+    audio.volume = name === 'wrong' ? 0.35 : name === 'correct' ? 0.45 : 0.6;
+    return [name, audio];
+  }));
+  let soundEnabled = localStorage.getItem('prismindBikeRaceSound') !== 'false';
+  function updateSoundButton() {
+    soundToggle.querySelector('img').src = soundEnabled ? 'assets/ui/speaker_circle.svg' : 'assets/ui/mute_circle.svg';
+    soundToggle.setAttribute('aria-label', soundEnabled ? 'השתק צלילים' : 'הפעל צלילים');
+    soundToggle.title = soundEnabled ? 'השתק צלילים' : 'הפעל צלילים';
+    soundToggle.setAttribute('aria-pressed', String(soundEnabled));
+  }
+  function playSound(name) {
+    if (!soundEnabled) return;
+    const audio = sounds[name];
+    audio.pause();
+    audio.currentTime = 0;
+    audio.play().catch(() => {});
+  }
+  soundToggle.addEventListener('click', () => {
+    soundEnabled = !soundEnabled;
+    localStorage.setItem('prismindBikeRaceSound', String(soundEnabled));
+    if (!soundEnabled) Object.values(sounds).forEach(audio => { audio.pause(); audio.currentTime = 0; });
+    updateSoundButton();
+  });
+  updateSoundButton();
 
   function randInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -354,10 +389,12 @@
       state.playerScore += 1;
       clickedButton.classList.add('correct');
       setFeedback(getDidacticFeedback(state.currentQuestion, true), 'success');
+      playSound('correct');
     } else {
       state.computerScore += 1;
       clickedButton.classList.add('wrong');
       setFeedback(getDidacticFeedback(state.currentQuestion, false), 'error');
+      playSound('wrong');
     }
 
     updateStats();
@@ -427,6 +464,8 @@
     summaryAccuracy.textContent = `${accuracy}%`;
 
     resultDialog.showModal();
+    if (winner === 'player') playSound('player');
+    else if (winner === 'computer') playSound('computer');
   }
 
   function goHome() {
